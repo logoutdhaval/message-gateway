@@ -19,8 +19,12 @@
 package org.fineract.messagegateway.sms.providers.impl.telerivet;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
+import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.client.api.response.PublishMessageResponse;
+import io.camunda.zeebe.client.api.response.SetVariablesResponse;
 import org.fineract.messagegateway.configuration.HostConfig;
 import org.fineract.messagegateway.constants.MessageGatewayConstants;
 import org.fineract.messagegateway.exception.MessageGatewayException;
@@ -59,6 +63,8 @@ public class TelerivetMessageProvider extends SMSProvider {
     @Autowired
     private SmsOutboundMessageRepository smsOutboundMessageRepository;
 
+    @Autowired
+    private ZeebeClient zeebeClient;
 
 
     @Autowired
@@ -94,6 +100,21 @@ public class TelerivetMessageProvider extends SMSProvider {
                     "status-url", statusURL));
             message.setDeliveryStatus(TelerivetStatus.smsStatus(sent_msg.getStatus()).getValue());
             message.setExternalId(sent_msg.getId());
+
+            logger.info("Publishing internal id {} and external id {} to the zeebe workflow:",message.getInternalId(),message.getExternalId());
+            Map<String,Object> map=new HashMap<String,Object>();
+            map.put("externalId",message.getExternalId());
+            map.put("internalId",message.getInternalId());
+            map.put("tenantId",message.getTenantId());
+            map.put("bridgeId",message.getBridgeId());
+            map.put("deliveryStatus",message.getDeliveryStatus());
+            final SetVariablesResponse wfInstance = zeebeClient.newSetVariablesCommand(message.getInternalId())
+                    .variables(map)
+                    .send()
+                    .join();
+            logger.info("-----------------------process Instance key {} --- {} ", wfInstance.getKey(), message.getInternalId());
+
+            logger.info("----------------Zeebe variable published----------------");
             logger.info(sent_msg.getId());
             logger.info("TelerivetMessageProvider.sendMessage():" + TelerivetStatus.smsStatus(sent_msg.getStatus()));
 
@@ -103,6 +124,7 @@ public class TelerivetMessageProvider extends SMSProvider {
             }
         } catch (IOException e) {
             logger.error("ApiException while sending message to :" + message.getMobileNumber() + " with reason " + e.getMessage());
+            message.setDeliveryStatus(SmsMessageStatusType.FAILED.getValue());
             message.setDeliveryStatus(SmsMessageStatusType.FAILED.getValue());
             message.setDeliveryErrorMessage(e.getMessage());
         }

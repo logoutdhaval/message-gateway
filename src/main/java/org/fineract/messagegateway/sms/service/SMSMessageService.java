@@ -95,6 +95,15 @@ public class SMSMessageService {
 		this.smsOutboundMessageRepository.saveAll(messages) ;
 		this.executorService.execute(new MessageTask(tenant, this.smsOutboundMessageRepository, this.smsProviderFactory, messages));
 	}
+	public void sendShortMessageToProvider(final String tenantId, final String tenantAppKey, final Collection<SMSMessage> messages,final String command) {
+		logger.debug("Request Received to send messages.....");
+		Tenant tenant = this.securityService.authenticate(tenantId, tenantAppKey) ;
+		for(SMSMessage message: messages) {
+			message.setTenant(tenant.getId());
+		}
+//		this.smsProviderFactory.sendShortMessage(messages);
+		this.executorService.execute(new MessageTask(tenant, this.smsOutboundMessageRepository, this.smsProviderFactory, messages,command));
+	}
 
 	public Collection<DeliveryStatusData> getDeliveryStatus(final String tenantId, final String tenantAppKey, final Collection<Long> internalIds) {
 		Tenant tenant = this.securityService.authenticate(tenantId, tenantAppKey) ;
@@ -147,7 +156,8 @@ public class SMSMessageService {
 		final SmsOutboundMessageRepository smsOutboundMessageRepository ;
 		final SMSProviderFactory smsProviderFactory ;
 		final Tenant tenant ;
-
+		final String command;
+//		RedisTemplate redisTemplate;
 		public MessageTask(final Tenant tenant, final SmsOutboundMessageRepository smsOutboundMessageRepository,
 						   final SMSProviderFactory smsProviderFactory,
 						   final Collection<SMSMessage> messages) {
@@ -155,12 +165,24 @@ public class SMSMessageService {
 			this.messages = messages ;
 			this.smsOutboundMessageRepository = smsOutboundMessageRepository ;
 			this.smsProviderFactory = smsProviderFactory ;
+			this.command=null;
 		}
-
+		public MessageTask(final Tenant tenant, final SmsOutboundMessageRepository smsOutboundMessageRepository,
+						   final SMSProviderFactory smsProviderFactory,
+						   final Collection<SMSMessage> messages, final String command) {
+			this.tenant = tenant ;
+			this.messages = messages ;
+			this.smsOutboundMessageRepository = smsOutboundMessageRepository ;
+			this.smsProviderFactory = smsProviderFactory ;
+			this.command = command;
+		}
+//		HashOperations hashOperations = redisTemplate.opsForHash();
 		@Override
 		public void run() {
 			this.smsProviderFactory.sendShortMessage(messages);
-			this.smsOutboundMessageRepository.saveAll(messages) ;
+			if(command==null) {
+				this.smsOutboundMessageRepository.saveAll(messages);
+			}
 		}
 	}
 

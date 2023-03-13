@@ -15,14 +15,12 @@ plugins {
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
     id 'java'
     id 'idea'
-    
     id 'eclipse'
     // Gradle license plugin switched to an obscure plugin
     // because the popular plugin stopped working with all recent gradle versions
     // https://github.com/hierynomus/license-gradle-plugin/issues/179
    // id 'org.cadixdev.licenser' version '0.6.1'
 }
-
 
 sourceCompatibility = '11'
 
@@ -65,9 +63,56 @@ dependencies {
     implementation('com.telerivet:TelerivetAPIClient:1.5.0')
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.6.0'
     implementation 'org.json:json:20210307'
+    implementation 'org.springframework.kafka:spring-kafka:2.7.2'
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    implementation 'org.apache.camel.springboot:camel-jackson-starter:3.12.0'
+    implementation 'org.apache.camel:camel-endpointdsl:3.12.0'
+    implementation 'org.apache.camel:camel-jetty:3.12.0'
+    implementation 'org.apache.camel:camel-undertow:3.12.0'
+    implementation 'org.apache.camel:camel-http:3.12.0'
+    implementation 'io.camunda:zeebe-client-java:8.1.4'
+    implementation 'org.apache.camel.springboot:camel-spring-boot-starter:3.12.0'
+    implementation("com.google.code.gson:gson:") {
+        version {
+            strictly("2.8.9") // You can also use dynamic versions
+        }
+    }
+    configurations.all {
+        resolutionStrategy {
+            force("com.google.code.gson:gson:2.8.9")
+//            force("com.google.guava:guava-gwt:14.0.1")
+        }
+    }
+//    implementation force 'com.google.code.gson:gson:'
+
+//    implementation "org.springframework.boot:spring-boot-dependencies:2.5.5"
+//    implementation 'org.apache.camel.springboot:camel-spring-boot-bom:3.12.0'
+//    implementation 'org.apache.camel:camel-bom:3.12.0'
+//    implementation 'org.apache.camel:camel-core:3.12.0'
+
+
+//    implementation 'org.scala-lang:scala-library:2.10.1'
+//    testCompile group: 'io.gatling.highcharts', name: 'gatling-charts-highcharts', version: '2.10.1'
+
 }
 
+task loadTest(type: JavaExec) {
+    dependsOn testClasses
+    description = "Load Test With Gatling"
+    group = "Load Test"
+    classpath = sourceSets.test.runtimeClasspath
+    jvmArgs = [
+            "-Dgatling.core.directory.binaries=${sourceSets.test.output.classesDirs.toString()}"
+    ]
+    main = "io.gatling.app.Gatling"
+    println "This is a simple gradle message ${buildDir}"
+    args = [
+            "--simulation", "computerdatabase.MessageGatewayTest",
+            "--results-folder", "${buildDir}/gatling-results",
+            "--binaries-folder", sourceSets.test.output.classesDirs.toString(),
+            "--bodies-folder", sourceSets.test.resources.srcDirs.toList().first().toString() + "/gatling/bodies",
+    ]
+}
 wrapper {
     gradleVersion = '7.3'
 }
