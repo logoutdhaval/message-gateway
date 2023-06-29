@@ -8,6 +8,9 @@ endpoints:
     enabled: true
 
 # database configuration
+flyway:
+  baselineOnMigrate: true
+  baseline-on-migrate: true
 spring:
   jpa:
     show-sql: false
@@ -15,13 +18,31 @@ spring:
     hibernate:
       ddl-auto: none
       use-new-id-generator-mappings: false
+  flyway:
+    baselineOnMigrate: true
+    baseline-on-migrate: true
 
+operationsmysql:
   datasource:
-    url: jdbc:mysql:thin://operations-mysql:3306/messagegateway
-    username: ${MYSQL_USERNAME:root}
-    password: ${MYSQL_PASSWORD:password}
-    driver-class-name: org.drizzle.jdbc.DrizzleDriver
-
+    core:
+      host: localhost
+      port: 3306
+      schema: tenants
+      username: root
+      password: ethieTieCh8ahv
+    common:
+      protocol: jdbc
+      subprotocol: mysql
+      driverclass_name: com.mysql.cj.jdbc.Driver
+token:
+  user:
+    access-validity-seconds: 600
+    refresh-validity-seconds: 43200
+  client:
+    access-validity-seconds: 3600
+    channel:
+      secret: "p1234"
+tenants: "gorilla,lion"
 # Status Callback configuration for Twilio. Port will be taken from server configuration
 hostconfig:
   host: localhost
